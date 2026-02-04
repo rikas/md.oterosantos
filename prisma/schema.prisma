@@ -1,0 +1,168 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Advert {
+  id            String        @id @default(uuid())
+  olxId         String        @unique
+  title         String
+  link          String
+  imageUrl      String
+  price         Int
+  ignored       Boolean       @default(false)
+  description   String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  advertiser    Advertiser    @relation(fields: [advertiserId], references: [id])
+  advertiserId  String
+  ignoredReason IgnoredReason @default(NOT_INTERESTED)
+  advertGames   AdvertGame[]
+  hidden        Boolean       @default(false)
+}
+
+model Advertiser {
+  id           String   @id @default(uuid())
+  olxId        String   @unique
+  name         String
+  blockAdverts Boolean  @default(false)
+  adverts      Advert[]
+  advertsCount Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Game {
+  id           String        @id @default(uuid())
+  name         String
+  owned        Boolean       @default(false)
+  box          BoxType       @default(NONE)
+  cartridge    CartridgeType @default(NONE)
+  manual       ManualType    @default(NONE)
+  ptManual     Boolean       @default(false) // Portuguese manual
+  status       Status        @default(NONE)
+  advertGames  AdvertGame[]
+  advertsCount Int           @default(0)
+  averagePrice Int           @default(0)
+}
+
+model AdvertGame {
+  advert    Advert   @relation(fields: [advertId], references: [id])
+  advertId  String
+  game      Game     @relation(fields: [gameId], references: [id])
+  gameId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([advertId, gameId])
+}
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+enum IgnoredReason {
+  NOT_INTERESTED
+  ALREADY_OWNED
+  INCOMPLETE
+  PRICE_TOO_HIGH
+  POOR_CONDITION
+  OTHER
+}
+
+enum BoxType {
+  NONE
+  MD_EU
+  MD_JP
+  GENESIS
+}
+
+enum CartridgeType {
+  NONE
+  MD_EU
+  MD_JP
+  GENESIS
+}
+
+enum ManualType {
+  NONE
+  MD_EU
+  MD_JP
+  GENESIS
+}
+
+enum Status {
+  NONE
+  WANT_TO_BUY
+  LOOKING_FOR
+  OWNED
+}
